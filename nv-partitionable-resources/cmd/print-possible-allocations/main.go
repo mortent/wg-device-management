@@ -44,8 +44,8 @@ func main() {
 func printPossibleAllocations(spec *resourceapi.ResourceSliceSpec) error {
 	deviceCapacityMap := make(map[string]map[resourceapi.QualifiedName]resourceapi.DeviceCapacity)
 	for _, d := range spec.Devices {
-		if len(d.Partitionable.Capacity) > 0 {
-			deviceCapacityMap[d.Name] = maps.Clone(d.Partitionable.Capacity)
+		if len(d.Capacity) > 0 {
+			deviceCapacityMap[d.Name] = maps.Clone(d.Capacity)
 		}
 	}
 
@@ -54,10 +54,10 @@ func printPossibleAllocations(spec *resourceapi.ResourceSliceSpec) error {
 		func(deviceCombo Devices) LoopControl {
 			localDeviceCapacityMap := make(map[string]map[resourceapi.QualifiedName]resourceapi.DeviceCapacity)
 			for _, device := range deviceCombo {
-				if len(device.Partitionable.ConsumesCapacityFrom) == 0 {
-					device.Partitionable.ConsumesCapacityFrom = append(device.Partitionable.ConsumesCapacityFrom, resourceapi.DeviceRef{device.Name})
+				if len(device.Includes) == 0 {
+					device.Includes = append(device.Includes, resourceapi.DeviceMixinRef{device.Name})
 				}
-				for _, source := range device.Partitionable.ConsumesCapacityFrom {
+				for _, source := range device.Includes {
 					if _, exists := deviceCapacityMap[source.Name]; !exists {
 						err = fmt.Errorf("device does not exist: %s", source)
 						return Break
@@ -69,16 +69,16 @@ func printPossibleAllocations(spec *resourceapi.ResourceSliceSpec) error {
 			}
 			for _, device := range deviceCombo {
 				availableCapacity := make(map[resourceapi.QualifiedName]resourceapi.DeviceCapacity)
-				for _, source := range device.Partitionable.ConsumesCapacityFrom {
+				for _, source := range device.Includes {
 					for k, v := range localDeviceCapacityMap[source.Name] {
 						newc := availableCapacity[k]
 						(&newc.Quantity).Add(v.Quantity)
 						availableCapacity[k] = newc
 					}
 				}
-				for k, v := range device.Partitionable.Capacity {
+				for k, v := range device.Capacity {
 					if _, exists := availableCapacity[k]; !exists {
-						fmt.Printf("device %+v, %v\n", device.Partitionable, availableCapacity)
+						fmt.Printf("device %+v, %v\n", device, availableCapacity)
 						err = fmt.Errorf("missing capacity in sources: %s", k)
 						return Break
 					}
@@ -86,9 +86,9 @@ func printPossibleAllocations(spec *resourceapi.ResourceSliceSpec) error {
 						return Break
 					}
 				}
-				for k, v := range device.Partitionable.Capacity {
+				for k, v := range device.Capacity {
 					remaining := v.Quantity
-					for _, source := range device.Partitionable.ConsumesCapacityFrom {
+					for _, source := range device.Includes {
 						if _, exists := localDeviceCapacityMap[source.Name][k]; !exists {
 							continue
 						}

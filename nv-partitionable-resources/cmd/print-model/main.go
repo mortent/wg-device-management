@@ -21,7 +21,7 @@ func main() {
 	l := nvdevicelib.New(dgxa100.New())
 
 	// Get the full list of allocatable devices from GPU 0 on the server.
-	allocatable, err := l.GetPerGpuAllocatableDevices(0)
+	allocatable, err := l.GetPerGpuAllocatableDevices(0, 1)
 	if err != nil {
 		klog.Fatalf("Error getAllocatableDevices: %v", err)
 	}
@@ -51,15 +51,17 @@ func main() {
 
 // printResourcesSliceSpec prints the resource slice spec as yaml.
 func printResourceSliceSpec(spec *resourceapi.ResourceSliceSpec) error {
-	slices.SortFunc(spec.DeviceMixins, func(a, b resourceapi.DeviceMixin) int {
-		if a.Name < b.Name {
-			return -1
-		}
-		if a.Name > b.Name {
-			return 1
-		}
-		return 0
-	})
+	if spec.Mixins != nil {
+		slices.SortFunc(spec.Mixins.Device, func(a, b resourceapi.DeviceMixin) int {
+			if a.Name < b.Name {
+				return -1
+			}
+			if a.Name > b.Name {
+				return 1
+			}
+			return 0
+		})
+	}
 	slices.SortFunc(spec.Devices, func(a, b resourceapi.Device) int {
 		if a.Name < b.Name {
 			return -1
